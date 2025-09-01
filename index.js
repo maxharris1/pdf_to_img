@@ -18,19 +18,14 @@ const upload = multer({
     },
 });
 
-// Initialize PDF.js with NO worker
+// Initialize PDF.js using legacy CommonJS build and disable worker entirely
 let pdfjsLib;
 const initPdfJs = async () => {
     if (!pdfjsLib) {
-        // Use the build without worker dependency
-        pdfjsLib = await import('pdfjs-dist/build/pdf.mjs');
-        
-        // Completely disable worker
+        // eslint-disable-next-line global-require
+        pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
         pdfjsLib.GlobalWorkerOptions.workerSrc = '';
         pdfjsLib.GlobalWorkerOptions.workerPort = null;
-        
-        // Force disable worker
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'data:application/javascript,';
     }
     return pdfjsLib;
 };
