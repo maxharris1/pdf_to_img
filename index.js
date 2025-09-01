@@ -1,3 +1,4 @@
+// Updated for Node.js 22.x compatibility
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
