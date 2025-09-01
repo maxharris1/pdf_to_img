@@ -1,0 +1,19 @@
+{
+  "baseUrl": "https://pdf-to-img-sigma.vercel.app",
+  "startedAt": "2025-09-01T18:40:34.816Z",
+  "results": [
+    {
+      "name": "health",
+      "ok": true,
+      "status": 200,
+      "durationMs": 121,
+      "body": {
+        "status": "healthy",
+        "service": "pdf-converter-service",
+        "timestamp": "2025-09-01T18:40:34.967Z"
+      }
+    }
+  ],
+  "success": false,
+  "error": "Error: Multipart convert failed (500): {\"error\":\"PDF conversion failed\",\"message\":\"Setting up fake worker failed: \\\"Cannot find module '/var/task/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs' imported from /var/task/node_modules/pdfjs-dist/legacy/build/pdf.mjs\\\".\",\"correlationId\":\"test-1756752034946-welo262n4bi-multipart\",\"processingTimeMs\":1}\n    at testConvertMultipart (/Users/maxharris/PEP/services/pdf-converter-service/tests/test-prod.js:76:15)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async main (/Users/maxharris/PEP/services/pdf-converter-service/tests/test-prod.js:185:19)"
+}
