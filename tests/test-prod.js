@@ -166,9 +166,7 @@ async function testConvertRawInvalidContent() {
 
 async function runConcurrency(pdfBuffer, requests = 3) {
     const started = process.hrtime();
-    const results = await Promise.all(
-        Array.from({ length: requests }, () => testConvertRaw(pdfBuffer)),
-    );
+    const results = await Promise.all(Array.from({ length: requests }, () => testConvertRaw(pdfBuffer)));
     const durationMs = toMs(started);
     const avg = Math.round(results.reduce((s, r) => s + r.durationMs, 0) / results.length);
     return { name: 'concurrency(raw x' + requests + ')', ok: true, totalDurationMs: durationMs, averageMs: avg };
@@ -210,7 +208,7 @@ async function main() {
     fs.writeFileSync(outPath, JSON.stringify(report, null, 2));
 
     // Console summary
-    /* eslint-disable no-console */
+
     console.log('--- PDF Converter Service Prod Test ---');
     console.log('Base URL:', report.baseUrl);
     if (report.success) {
@@ -225,5 +223,3 @@ async function main() {
 }
 
 main();
-
-
