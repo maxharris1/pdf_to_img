@@ -52,6 +52,10 @@ app.post('/convert', upload.single('pdf'), async (req, res) => {
             outputFolder: undefined,
             pagesRange: [1],
             strictPaging: false,
+            // Disable worker for serverless environment
+            disableWorker: true,
+            useWorkerFetch: false,
+            isEvalSupported: false,
         });
 
         if (!pngPages || pngPages.length === 0) {
@@ -123,6 +127,10 @@ app.post(
                 outputFolder: undefined,
                 pagesRange: [1],
                 strictPaging: false,
+                // Disable worker for serverless environment
+                disableWorker: true,
+                useWorkerFetch: false,
+                isEvalSupported: false,
             });
 
             if (!pngPages || pngPages.length === 0) {
