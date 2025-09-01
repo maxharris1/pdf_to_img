@@ -24,6 +24,16 @@ app.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
         service: 'pdf-converter-service',
+        version: 'pdf-poppler-v2',
+        timestamp: new Date().toISOString(),
+    });
+});
+
+// Test endpoint to verify deployment
+app.get('/test', (req, res) => {
+    res.json({
+        message: 'This is the NEW pdf-poppler implementation',
+        library: 'pdf-poppler',
         timestamp: new Date().toISOString(),
     });
 });
