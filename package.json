@@ -1,7 +1,7 @@
 {
     "name": "pdf-converter-service",
     "version": "1.0.0",
-    "description": "Fast PDF to PNG conversion service for NSA Case Navigator",
+    "description": "Fast PDF to PNG conversion service using pdf-poppler for NSA Case Navigator",
     "main": "index.js",
     "scripts": {
         "start": "node index.js",
