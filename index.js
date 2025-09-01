@@ -1,9 +1,15 @@
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const pdf = require('pdf-poppler');
 const fs = require('fs');
 const path = require('path');
+
+// Import pdf.js and canvas for PDF rendering
+const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+const { createCanvas } = require('canvas');
+
+// Disable worker for serverless environment
+pdfjsLib.GlobalWorkerOptions.workerSrc = null;
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -56,41 +62,38 @@ app.post('/convert', upload.single('pdf'), async (req, res) => {
         // Convert PDF to PNG (first page only)
         console.log(`[${correlationId}] Starting PDF to PNG conversion...`);
 
-        // Write PDF buffer to temp file
-        const tempPdfPath = path.join('/tmp', `${correlationId}.pdf`);
-        const tempOutputDir = path.join('/tmp', `output-${correlationId}`);
+        // Load PDF document
+        const loadingTask = pdfjsLib.getDocument({
+            data: req.file.buffer,
+            disableWorker: true,
+            useWorkerFetch: false,
+            isEvalSupported: false,
+        });
 
-        fs.writeFileSync(tempPdfPath, req.file.buffer);
+        const pdfDocument = await loadingTask.promise;
+        console.log(`[${correlationId}] PDF loaded, pages: ${pdfDocument.numPages}`);
 
-        // Configure pdf-poppler for high quality conversion
-        const options = {
-            format: 'png',
-            out_dir: tempOutputDir,
-            out_prefix: 'page',
-            page: 1, // First page only
-            scale: 2048, // High resolution for OCR
-            single_file: true,
+        // Get first page
+        const page = await pdfDocument.getPage(1);
+        const viewport = page.getViewport({ scale: 2.0 });
+
+        // Create canvas
+        const canvas = createCanvas(viewport.width, viewport.height);
+        const context = canvas.getContext('2d');
+
+        // Render PDF page to canvas
+        const renderContext = {
+            canvasContext: context,
+            viewport: viewport,
         };
 
-        // Convert PDF to PNG
-        const results = await pdf.convert(tempPdfPath, options);
+        await page.render(renderContext).promise;
 
-        if (!results || results.length === 0) {
-            throw new Error('No pages converted from PDF');
-        }
+        // Convert canvas to PNG buffer
+        const pngBuffer = canvas.toBuffer('image/png');
 
-        // Read the converted PNG file
-        const pngPath = path.join(tempOutputDir, 'page-1.png');
-        const pngBuffer = fs.readFileSync(pngPath);
-
-        // Clean up temp files
-        try {
-            fs.unlinkSync(tempPdfPath);
-            fs.unlinkSync(pngPath);
-            fs.rmdirSync(tempOutputDir);
-        } catch (cleanupError) {
-            console.warn(`[${correlationId}] Cleanup warning:`, cleanupError.message);
-        }
+        // Clean up
+        await pdfDocument.destroy();
         const processingTime = Date.now() - startTime;
 
         console.log(
@@ -147,41 +150,38 @@ app.post(
             // Convert PDF to PNG (first page only)
             console.log(`[${correlationId}] Starting raw PDF to PNG conversion...`);
 
-            // Write PDF buffer to temp file
-            const tempPdfPath = path.join('/tmp', `${correlationId}-raw.pdf`);
-            const tempOutputDir = path.join('/tmp', `output-${correlationId}-raw`);
+            // Load PDF document
+            const loadingTask = pdfjsLib.getDocument({
+                data: req.body,
+                disableWorker: true,
+                useWorkerFetch: false,
+                isEvalSupported: false,
+            });
 
-            fs.writeFileSync(tempPdfPath, req.body);
+            const pdfDocument = await loadingTask.promise;
+            console.log(`[${correlationId}] Raw PDF loaded, pages: ${pdfDocument.numPages}`);
 
-            // Configure pdf-poppler for high quality conversion
-            const options = {
-                format: 'png',
-                out_dir: tempOutputDir,
-                out_prefix: 'page',
-                page: 1, // First page only
-                scale: 2048, // High resolution for OCR
-                single_file: true,
+            // Get first page
+            const page = await pdfDocument.getPage(1);
+            const viewport = page.getViewport({ scale: 2.0 });
+
+            // Create canvas
+            const canvas = createCanvas(viewport.width, viewport.height);
+            const context = canvas.getContext('2d');
+
+            // Render PDF page to canvas
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport,
             };
 
-            // Convert PDF to PNG
-            const results = await pdf.convert(tempPdfPath, options);
+            await page.render(renderContext).promise;
 
-            if (!results || results.length === 0) {
-                throw new Error('No pages converted from PDF');
-            }
+            // Convert canvas to PNG buffer
+            const pngBuffer = canvas.toBuffer('image/png');
 
-            // Read the converted PNG file
-            const pngPath = path.join(tempOutputDir, 'page-1.png');
-            const pngBuffer = fs.readFileSync(pngPath);
-
-            // Clean up temp files
-            try {
-                fs.unlinkSync(tempPdfPath);
-                fs.unlinkSync(pngPath);
-                fs.rmdirSync(tempOutputDir);
-            } catch (cleanupError) {
-                console.warn(`[${correlationId}] Raw cleanup warning:`, cleanupError.message);
-            }
+            // Clean up
+            await pdfDocument.destroy();
             const processingTime = Date.now() - startTime;
 
             console.log(
