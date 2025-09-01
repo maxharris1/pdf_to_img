@@ -18,14 +18,19 @@ const upload = multer({
     },
 });
 
-// Initialize PDF.js with proper worker
+// Initialize PDF.js with NO worker
 let pdfjsLib;
 const initPdfJs = async () => {
     if (!pdfjsLib) {
-        pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-        // Use a simpler approach - disable worker for serverless
-        pdfjsLib.GlobalWorkerOptions.workerSrc = null;
+        // Use the build without worker dependency
+        pdfjsLib = await import('pdfjs-dist/build/pdf.mjs');
+        
+        // Completely disable worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '';
         pdfjsLib.GlobalWorkerOptions.workerPort = null;
+        
+        // Force disable worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'data:application/javascript,';
     }
     return pdfjsLib;
 };
@@ -47,9 +52,11 @@ async function convertPdfToPng(pdfBuffer, correlationId) {
     console.log(`[${correlationId}] Loading PDF document...`);
     const loadingTask = pdfjs.getDocument({ 
         data: pdfBuffer,
+        // Disable all worker-related features
         useWorkerFetch: false,
         isEvalSupported: false,
-        useSystemFonts: true
+        useSystemFonts: true,
+        disableWorker: true
     });
     
     const pdf = await loadingTask.promise;
