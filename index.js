@@ -1,7 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const { pdfToPng } = require('pdf-to-png-converter');
+const pdf = require('pdf-poppler');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -43,26 +45,42 @@ app.post('/convert', upload.single('pdf'), async (req, res) => {
 
         // Convert PDF to PNG (first page only)
         console.log(`[${correlationId}] Starting PDF to PNG conversion...`);
-        const pngPages = await pdfToPng(req.file.buffer, {
-            disableFontFace: false,
-            useSystemFonts: false,
-            enableXfa: false,
-            viewportScale: 2.0,
-            outputFilesFolder: undefined,
-            outputFolder: undefined,
-            pagesRange: [1],
-            strictPaging: false,
-            // Disable worker for serverless environment
-            disableWorker: true,
-            useWorkerFetch: false,
-            isEvalSupported: false,
-        });
+        
+        // Write PDF buffer to temp file
+        const tempPdfPath = path.join('/tmp', `${correlationId}.pdf`);
+        const tempOutputDir = path.join('/tmp', `output-${correlationId}`);
+        
+        fs.writeFileSync(tempPdfPath, req.file.buffer);
+        
+        // Configure pdf-poppler for high quality conversion
+        const options = {
+            format: 'png',
+            out_dir: tempOutputDir,
+            out_prefix: 'page',
+            page: 1,                // First page only
+            scale: 2048,           // High resolution for OCR
+            single_file: true
+        };
 
-        if (!pngPages || pngPages.length === 0) {
+        // Convert PDF to PNG
+        const results = await pdf.convert(tempPdfPath, options);
+        
+        if (!results || results.length === 0) {
             throw new Error('No pages converted from PDF');
         }
 
-        const pngBuffer = pngPages[0].content;
+        // Read the converted PNG file
+        const pngPath = path.join(tempOutputDir, 'page-1.png');
+        const pngBuffer = fs.readFileSync(pngPath);
+        
+        // Clean up temp files
+        try {
+            fs.unlinkSync(tempPdfPath);
+            fs.unlinkSync(pngPath);
+            fs.rmdirSync(tempOutputDir);
+        } catch (cleanupError) {
+            console.warn(`[${correlationId}] Cleanup warning:`, cleanupError.message);
+        }
         const processingTime = Date.now() - startTime;
 
         console.log(
@@ -118,26 +136,42 @@ app.post(
 
             // Convert PDF to PNG (first page only)
             console.log(`[${correlationId}] Starting raw PDF to PNG conversion...`);
-            const pngPages = await pdfToPng(req.body, {
-                disableFontFace: false,
-                useSystemFonts: false,
-                enableXfa: false,
-                viewportScale: 2.0,
-                outputFilesFolder: undefined,
-                outputFolder: undefined,
-                pagesRange: [1],
-                strictPaging: false,
-                // Disable worker for serverless environment
-                disableWorker: true,
-                useWorkerFetch: false,
-                isEvalSupported: false,
-            });
+            
+            // Write PDF buffer to temp file
+            const tempPdfPath = path.join('/tmp', `${correlationId}-raw.pdf`);
+            const tempOutputDir = path.join('/tmp', `output-${correlationId}-raw`);
+            
+            fs.writeFileSync(tempPdfPath, req.body);
+            
+            // Configure pdf-poppler for high quality conversion
+            const options = {
+                format: 'png',
+                out_dir: tempOutputDir,
+                out_prefix: 'page',
+                page: 1,                // First page only
+                scale: 2048,           // High resolution for OCR
+                single_file: true
+            };
 
-            if (!pngPages || pngPages.length === 0) {
+            // Convert PDF to PNG
+            const results = await pdf.convert(tempPdfPath, options);
+            
+            if (!results || results.length === 0) {
                 throw new Error('No pages converted from PDF');
             }
 
-            const pngBuffer = pngPages[0].content;
+            // Read the converted PNG file
+            const pngPath = path.join(tempOutputDir, 'page-1.png');
+            const pngBuffer = fs.readFileSync(pngPath);
+            
+            // Clean up temp files
+            try {
+                fs.unlinkSync(tempPdfPath);
+                fs.unlinkSync(pngPath);
+                fs.rmdirSync(tempOutputDir);
+            } catch (cleanupError) {
+                console.warn(`[${correlationId}] Raw cleanup warning:`, cleanupError.message);
+            }
             const processingTime = Date.now() - startTime;
 
             console.log(
