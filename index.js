@@ -1,8 +1,7 @@
-// Updated for Node.js 22.x compatibility
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const { createCanvas } = require('canvas');
+const { pdfToPng } = require('pdf-to-png-converter');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -18,18 +17,6 @@ const upload = multer({
     },
 });
 
-// Initialize PDF.js using legacy CommonJS build and disable worker entirely
-let pdfjsLib;
-const initPdfJs = async () => {
-    if (!pdfjsLib) {
-        // eslint-disable-next-line global-require
-        pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-        pdfjsLib.GlobalWorkerOptions.workerPort = null;
-    }
-    return pdfjsLib;
-};
-
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({
@@ -38,64 +25,6 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString(),
     });
 });
-
-// Convert PDF to PNG using PDF.js + Canvas
-async function convertPdfToPng(pdfBuffer, correlationId) {
-    console.log(`[${correlationId}] Initializing PDF.js...`);
-    const pdfjs = await initPdfJs();
-    
-    console.log(`[${correlationId}] Loading PDF document...`);
-    const loadingTask = pdfjs.getDocument({ 
-        data: pdfBuffer,
-        // Disable all worker-related features
-        useWorkerFetch: false,
-        isEvalSupported: false,
-        useSystemFonts: true,
-        disableWorker: true
-    });
-    
-    const pdf = await loadingTask.promise;
-    console.log(`[${correlationId}] PDF loaded, pages: ${pdf.numPages}`);
-    
-    if (pdf.numPages === 0) {
-        throw new Error('PDF has no pages');
-    }
-    
-    // Get first page
-    const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale: 2.0 });
-    
-    console.log(`[${correlationId}] Creating canvas ${viewport.width}x${viewport.height}...`);
-    
-    // Create canvas
-    const canvas = createCanvas(viewport.width, viewport.height);
-    const context = canvas.getContext('2d');
-    
-    // Fill with white background
-    context.fillStyle = 'white';
-    context.fillRect(0, 0, viewport.width, viewport.height);
-    
-    console.log(`[${correlationId}] Rendering PDF page to canvas...`);
-    
-    // Render PDF page to canvas
-    const renderContext = {
-        canvasContext: context,
-        viewport: viewport,
-    };
-    
-    await page.render(renderContext).promise;
-    
-    console.log(`[${correlationId}] Converting canvas to PNG buffer...`);
-    
-    // Convert canvas to PNG buffer
-    const pngBuffer = canvas.toBuffer('image/png');
-    
-    // Cleanup
-    await page.cleanup();
-    await pdf.destroy();
-    
-    return pngBuffer;
-}
 
 // Main conversion endpoint
 app.post('/convert', upload.single('pdf'), async (req, res) => {
@@ -112,7 +41,24 @@ app.post('/convert', upload.single('pdf'), async (req, res) => {
             });
         }
 
-        const pngBuffer = await convertPdfToPng(req.file.buffer, correlationId);
+        // Convert PDF to PNG (first page only)
+        console.log(`[${correlationId}] Starting PDF to PNG conversion...`);
+        const pngPages = await pdfToPng(req.file.buffer, {
+            disableFontFace: false,
+            useSystemFonts: false,
+            enableXfa: false,
+            viewportScale: 2.0,
+            outputFilesFolder: undefined,
+            outputFolder: undefined,
+            pagesRange: [1],
+            strictPaging: false,
+        });
+
+        if (!pngPages || pngPages.length === 0) {
+            throw new Error('No pages converted from PDF');
+        }
+
+        const pngBuffer = pngPages[0].content;
         const processingTime = Date.now() - startTime;
 
         console.log(
@@ -166,7 +112,24 @@ app.post(
                 });
             }
 
-            const pngBuffer = await convertPdfToPng(req.body, correlationId);
+            // Convert PDF to PNG (first page only)
+            console.log(`[${correlationId}] Starting raw PDF to PNG conversion...`);
+            const pngPages = await pdfToPng(req.body, {
+                disableFontFace: false,
+                useSystemFonts: false,
+                enableXfa: false,
+                viewportScale: 2.0,
+                outputFilesFolder: undefined,
+                outputFolder: undefined,
+                pagesRange: [1],
+                strictPaging: false,
+            });
+
+            if (!pngPages || pngPages.length === 0) {
+                throw new Error('No pages converted from PDF');
+            }
+
+            const pngBuffer = pngPages[0].content;
             const processingTime = Date.now() - startTime;
 
             console.log(

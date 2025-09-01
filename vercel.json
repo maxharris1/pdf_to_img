@@ -3,10 +3,7 @@
     "builds": [
         {
             "src": "index.js",
-            "use": "@vercel/node",
-            "config": {
-                "maxDuration": 30
-            }
+            "use": "@vercel/node"
         }
     ],
     "routes": [
@@ -14,5 +11,16 @@
             "src": "/(.*)",
             "dest": "/index.js"
         }
-    ]
+    ],
+    "functions": {
+        "index.js": {
+            "maxDuration": 30,
+            "includeFiles": [
+                "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
+                "node_modules/pdfjs-dist/legacy/build/pdf.mjs",
+                "node_modules/pdfjs-dist/build/pdf.worker.js",
+                "node_modules/pdfjs-dist/build/pdf.js"
+            ]
+        }
+    }
 }
