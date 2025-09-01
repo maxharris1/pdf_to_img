@@ -45,26 +45,26 @@ app.post('/convert', upload.single('pdf'), async (req, res) => {
 
         // Convert PDF to PNG (first page only)
         console.log(`[${correlationId}] Starting PDF to PNG conversion...`);
-        
+
         // Write PDF buffer to temp file
         const tempPdfPath = path.join('/tmp', `${correlationId}.pdf`);
         const tempOutputDir = path.join('/tmp', `output-${correlationId}`);
-        
+
         fs.writeFileSync(tempPdfPath, req.file.buffer);
-        
+
         // Configure pdf-poppler for high quality conversion
         const options = {
             format: 'png',
             out_dir: tempOutputDir,
             out_prefix: 'page',
-            page: 1,                // First page only
-            scale: 2048,           // High resolution for OCR
-            single_file: true
+            page: 1, // First page only
+            scale: 2048, // High resolution for OCR
+            single_file: true,
         };
 
         // Convert PDF to PNG
         const results = await pdf.convert(tempPdfPath, options);
-        
+
         if (!results || results.length === 0) {
             throw new Error('No pages converted from PDF');
         }
@@ -72,7 +72,7 @@ app.post('/convert', upload.single('pdf'), async (req, res) => {
         // Read the converted PNG file
         const pngPath = path.join(tempOutputDir, 'page-1.png');
         const pngBuffer = fs.readFileSync(pngPath);
-        
+
         // Clean up temp files
         try {
             fs.unlinkSync(tempPdfPath);
@@ -136,26 +136,26 @@ app.post(
 
             // Convert PDF to PNG (first page only)
             console.log(`[${correlationId}] Starting raw PDF to PNG conversion...`);
-            
+
             // Write PDF buffer to temp file
             const tempPdfPath = path.join('/tmp', `${correlationId}-raw.pdf`);
             const tempOutputDir = path.join('/tmp', `output-${correlationId}-raw`);
-            
+
             fs.writeFileSync(tempPdfPath, req.body);
-            
+
             // Configure pdf-poppler for high quality conversion
             const options = {
                 format: 'png',
                 out_dir: tempOutputDir,
                 out_prefix: 'page',
-                page: 1,                // First page only
-                scale: 2048,           // High resolution for OCR
-                single_file: true
+                page: 1, // First page only
+                scale: 2048, // High resolution for OCR
+                single_file: true,
             };
 
             // Convert PDF to PNG
             const results = await pdf.convert(tempPdfPath, options);
-            
+
             if (!results || results.length === 0) {
                 throw new Error('No pages converted from PDF');
             }
@@ -163,7 +163,7 @@ app.post(
             // Read the converted PNG file
             const pngPath = path.join(tempOutputDir, 'page-1.png');
             const pngBuffer = fs.readFileSync(pngPath);
-            
+
             // Clean up temp files
             try {
                 fs.unlinkSync(tempPdfPath);
